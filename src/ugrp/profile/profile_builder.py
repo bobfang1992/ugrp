@@ -113,6 +113,7 @@ class ProfileBuilder:
 
         # Popularity bias (-1 = niche lover, 0 = neutral, +1 = blockbuster lover)
         # Use all rated items for this metric
+        avg_popularity = 0.5  # Default to neutral if no popularity data
         if 'popularity_quantile' in user_history.columns:
             avg_popularity = user_history['popularity_quantile'].mean()
             # Map [0, 1] to [-1, +1] with 0.5 as neutral
