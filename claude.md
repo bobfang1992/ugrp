@@ -1,30 +1,72 @@
-# UGRP Next Steps
+# UGRP Progress Tracker
 
-## Current Status
-- ✅ Data downloaded (ML-1M and ML-20M in `data/raw/`)
+## ✅ M1 Complete: Base + Profile
 
-## Next Steps (M1: Base + Profile)
+### Completed
+1. **Data Processing**
+   - ✅ ML-1M loaded and parsed (3,883 movies, 1M ratings, 6,040 users)
+   - ✅ Converted to parquet (`data/processed/`)
+   - ✅ Movie metadata extracted (title, year, genres, popularity)
+   - ✅ EDA script (`scripts/eda.py`)
 
-### 1. Data Processing
-- Load and parse MovieLens data
-- Convert to parquet for faster access
-- Extract movie metadata (title, year, genres)
-- Basic EDA (distributions, sparsity, etc.)
+2. **Base Recommender**
+   - ✅ ALS model trained (64 factors, 15 iterations)
+   - ✅ Top-200 candidates generated per user (1.2M total)
+   - ✅ Model saved (`data/processed/als_model.pkl`)
+   - ✅ Candidates saved (`data/processed/candidates.parquet`)
 
-### 2. Base Recommender
-- Train simple ALS/MF model
-- Generate Top-200 candidates per user
-- Sanity check: compute Recall@10, NDCG@10
+3. **Profile Builder**
+   - ✅ 6,040 user profiles built
+   - ✅ Stats: top genres, year prefs, popularity bias, exploration score
+   - ✅ Profiles saved (`data/processed/user_profiles.json`)
+   - ✅ Schema documented (`docs/profile_schema.md`)
 
-### 3. Profile Builder
-- Aggregate user stats (top genres, year preferences, avg popularity)
-- Create structured profile JSON
-- Simple text summary (no LLM needed yet)
+### Key Files
+- `src/ugrp/recsys/data_loader.py` - Data loading & cleaning
+- `src/ugrp/recsys/model.py` - ALS recommender
+- `src/ugrp/profile/profile_builder.py` - User profiling
+- `docs/profile_schema.md` - Profile JSON schema
 
-## Decision Needed
-- Start with ML-1M or ML-20M? (recommend ML-1M for speed)
+### Training Commands
+```bash
+# Activate environment
+source .venv/bin/activate
 
-## After M1
-- M2: Control JSON schema + deterministic reranker
-- M3: LLM integration (parser + explainer)
-- M4: ControlBench + evaluation
+# 1. Process data (if needed)
+python src/ugrp/recsys/data_loader.py
+
+# 2. Train model + build profiles
+python src/ugrp/recsys/model.py
+python src/ugrp/profile/profile_builder.py
+
+# 3. View stats
+python scripts/eda.py
+```
+
+---
+
+## 🎯 Next: M2 - Control JSON Schema + Deterministic Reranker
+
+### Goal
+Build the control layer that takes user preferences as JSON and re-ranks candidates deterministically.
+
+### Tasks
+1. **Control JSON Schema** (`src/ugrp/control/`)
+   - Define schema v0.1 (constraints, preferences, ui, meta)
+   - JSON validator
+   - Example controls
+
+2. **Deterministic Reranker** (`src/ugrp/rerank/`)
+   - Hard constraint filtering (genre, year)
+   - Soft preference scoring (genre weights, novelty, popularity)
+   - MMR-style diversity selection
+   - Score breakdown (auditable)
+
+3. **Evidence Builder** (`src/ugrp/explain/`)
+   - Per-item explanation structure
+   - Constraint pass/fail tracking
+   - Component score breakdown
+
+### After M2
+- M3: LLM integration (intent parser + explanation renderer)
+- M4: ControlBench + cross-LLM evaluation
