@@ -85,9 +85,8 @@ class ALSRecommender:
         print(f"Sparsity: {self.user_item_matrix.nnz / np.prod(self.user_item_matrix.shape) * 100:.2f}%")
 
         print("Training ALS model...")
-        # Note: For v0.1, we use user×item directly (non-standard but works for baseline)
-        # Standard implicit expects item×user, but transposing causes index mapping issues
-        # This is acceptable since spec §5 states the baseline is not optimized
+        # Implicit library treats rows=users, cols=items
+        # For collaborative filtering (users rating items), pass user×item directly
         self.model.fit(self.user_item_matrix, show_progress=True)
 
         print("✓ Training complete!")
@@ -110,10 +109,13 @@ class ALSRecommender:
         user_idx = self.user_id_map[user_id]
 
         # Get recommendations from model
-        # recommend() returns (item_ids, scores)
+        # recommend() expects user_items as (n_query_users, n_items) matrix
+        # For single user: extract row but keep 2D shape (1, n_items)
+        user_items_row = self.user_item_matrix[user_idx:user_idx+1]
+
         item_ids, scores = self.model.recommend(
             userid=user_idx,
-            user_items=self.user_item_matrix[user_idx],
+            user_items=user_items_row,
             N=n,
             filter_already_liked_items=filter_already_liked
         )

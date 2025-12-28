@@ -52,10 +52,10 @@ ugrp/
 │   ├── bench/         # ControlBench generator + evaluator
 │   └── adapters/      # LLM adapters (GPT, Gemini, etc.)
 ├── data/              # datasets (gitignored)
-├── ai/                # specs and documentation
+├── docs/              # specs and documentation
 └── outputs/           # logs and reports (gitignored)
 ```
 
 ## Documentation
 
-See `ai/UGRP_Spec_v0.1.md` for the full specification.
+See `docs/UGRP_Spec_v0.1.md` for the full specification.
