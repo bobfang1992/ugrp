@@ -85,8 +85,9 @@ class ALSRecommender:
         print(f"Sparsity: {self.user_item_matrix.nnz / np.prod(self.user_item_matrix.shape) * 100:.2f}%")
 
         print("Training ALS model...")
-        # Implicit library treats rows=users, cols=items
-        # For collaborative filtering (users rating items), pass user×item directly
+        # In this environment, implicit expects user×item for fit() and recommend().
+        # If you transpose, item_factors will be sized by n_users and recommend()
+        # will return ids in the user range, breaking the movie_id mapping.
         self.model.fit(self.user_item_matrix, show_progress=True)
 
         print("✓ Training complete!")
