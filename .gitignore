@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[oc]
+*.so
+*.egg
+*.egg-info
+build/
+dist/
+wheels/
+.venv/
+venv/
+ENV/
+
+# Data files (cannot redistribute MovieLens data)
+data/
+
+# Model files
+*.model
+*.pkl
+*.joblib
+*.h5
+*.pt
+*.pth
+
+# Outputs & logs
+outputs/
+logs/
+*.log
+*.jsonl
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temporary
+tmp/
+temp/
+.cache/
