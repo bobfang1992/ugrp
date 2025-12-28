@@ -58,4 +58,6 @@ ugrp/
 
 ## Documentation
 
-See `docs/UGRP_Spec_v0.1.md` for the full specification.
+- `docs/UGRP_Spec_v0.1.md` - full specification
+- `docs/TRAINING.md` - training guide for base recommender + profiles
+- `docs/profile_schema.md` - profile JSON schema and notes
