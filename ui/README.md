@@ -1,24 +1,31 @@
 # UGRP UI
 
-Streamlit interfaces for exploring profiles and getting personalized recommendations.
+Multi-page Streamlit app for exploring profiles and getting personalized recommendations.
 
-## Apps
+## Quick Start
 
-### 1. Profile Viewer - Explore Existing Users
 ```bash
-streamlit run ui/profile_viewer.py
+# Activate environment
+source .venv/bin/activate
+
+# Run the app (launches all pages)
+streamlit run ui/Home.py
 ```
+
+The app will open at `http://localhost:8501` with navigation in the sidebar.
+
+## Pages
+
+### 🏠 Home
+Landing page with overview and system status check.
+
+### 👥 Profile Viewer
 Explore the 6,040 users in the dataset with their profiles and recommendations.
 
-### 2. My Profile - Create Your Own Profile
-```bash
-streamlit run ui/my_profile.py
-```
+### ⭐ My Profile
 Pick 10 movies you like and get 20 personalized recommendations!
 
 ---
-
-Both apps will open in your browser at `http://localhost:8501`
 
 ## Profile Viewer Features
 
