@@ -10,6 +10,8 @@ import numpy as np
 from collections import Counter
 from pathlib import Path
 import json
+from multiprocessing import Pool, cpu_count
+from functools import partial
 
 
 def convert_to_native_types(obj):
@@ -26,6 +28,127 @@ def convert_to_native_types(obj):
         return obj.tolist()
     else:
         return obj
+
+
+def _build_profile_worker(user_id, movies_df, ratings_df):
+    """
+    Worker function for parallel profile building.
+
+    Args:
+        user_id: User ID to build profile for
+        movies_df: Movies DataFrame
+        ratings_df: Ratings DataFrame
+
+    Returns:
+        Profile dictionary or None
+    """
+    # Get user's rating history
+    user_ratings = ratings_df[ratings_df['userId'] == user_id]
+
+    if len(user_ratings) == 0:
+        return None
+
+    # Merge with movie metadata
+    user_history = user_ratings.merge(
+        movies_df[['movieId', 'title_clean', 'year', 'genres_list',
+                   'num_ratings', 'popularity_quantile', 'avg_rating']],
+        on='movieId'
+    )
+
+    # Only consider liked items (rating >= 4) for preference profiling
+    liked_items = user_history[user_history['rating'] >= 4]
+
+    profile = {
+        'userId': user_id,
+        'num_ratings': len(user_ratings),
+        'avg_rating': float(user_ratings['rating'].mean()),
+        'std_rating': float(user_ratings['rating'].std()),
+    }
+
+    # Genre preferences (from liked items)
+    if len(liked_items) > 0:
+        all_genres = []
+        for genres in liked_items['genres_list']:
+            all_genres.extend(genres)
+        genre_counts = Counter(all_genres)
+        total_genre_count = sum(genre_counts.values())
+
+        # Top 5 genres with proportions
+        top_genres = dict(genre_counts.most_common(5))
+        profile['top_genres'] = {
+            genre: count / total_genre_count
+            for genre, count in top_genres.items()
+        }
+    else:
+        profile['top_genres'] = {}
+
+    # Year preferences (from liked items)
+    if len(liked_items) > 0 and liked_items['year'].notna().any():
+        profile['year_min'] = int(liked_items['year'].min())
+        profile['year_max'] = int(liked_items['year'].max())
+        profile['year_median'] = float(liked_items['year'].median())
+
+        # Decade distribution
+        decades = (liked_items['year'] // 10) * 10
+        decade_counts = decades.value_counts()
+        profile['top_decades'] = {
+            int(decade): int(count)
+            for decade, count in decade_counts.head(3).items()
+        }
+    else:
+        profile['year_min'] = None
+        profile['year_max'] = None
+        profile['year_median'] = None
+        profile['top_decades'] = {}
+
+    # Popularity bias
+    avg_popularity = 0.5
+    if 'popularity_quantile' in user_history.columns:
+        avg_popularity = user_history['popularity_quantile'].mean()
+        profile['popularity_bias'] = float((avg_popularity - 0.5) * 2)
+    else:
+        profile['popularity_bias'] = 0.0
+
+    # Exploration tendency
+    exploration_score = 0.0
+    if len(user_ratings) >= 20:
+        pop_component = 1.0 - avg_popularity
+        rating_std = user_ratings['rating'].std()
+        variance_component = min(rating_std / 1.5, 1.0)
+
+        if len(liked_items) > 0:
+            unique_genres = set()
+            for genres in liked_items['genres_list']:
+                unique_genres.update(genres)
+            genre_diversity = len(unique_genres) / 18
+        else:
+            genre_diversity = 0
+
+        exploration_score = (pop_component * 0.5 + variance_component * 0.3 + genre_diversity * 0.2)
+
+    profile['exploration_score'] = float(exploration_score)
+
+    if exploration_score < 0.33:
+        profile['exploration_tendency'] = 'conservative'
+    elif exploration_score < 0.66:
+        profile['exploration_tendency'] = 'medium'
+    else:
+        profile['exploration_tendency'] = 'adventurous'
+
+    # Recent activity
+    recent_liked = liked_items.sort_values('timestamp', ascending=False).head(10)
+    profile['recent_liked'] = [
+        {
+            'movieId': int(row['movieId']),
+            'title': row['title_clean'],
+            'year': int(row['year']) if pd.notna(row['year']) else None,
+            'rating': int(row['rating']),
+            'genres': row['genres_list']
+        }
+        for _, row in recent_liked.iterrows()
+    ]
+
+    return profile
 
 
 class ProfileBuilder:
@@ -169,23 +292,52 @@ class ProfileBuilder:
 
         return profile
 
-    def build_all_profiles(self):
+    def build_all_profiles(self, n_workers=1):
         """
         Build profiles for all users in the dataset.
+
+        Args:
+            n_workers: Number of parallel workers (1 = sequential, 0 = auto-detect CPUs)
 
         Returns:
             Dictionary mapping userId -> profile
         """
-        print(f"Building profiles for {len(self.ratings['userId'].unique())} users...")
-
         all_users = self.ratings['userId'].unique()
-        for i, user_id in enumerate(all_users):
-            if (i + 1) % 1000 == 0:
-                print(f"  Processed {i + 1}/{len(all_users)} users...")
 
-            profile = self.build_profile(user_id)
-            if profile:
-                self.profiles[user_id] = profile
+        if n_workers == 0:
+            n_workers = cpu_count()
+
+        print(f"Building profiles for {len(all_users)} users (using {n_workers} workers)...")
+
+        if n_workers == 1:
+            # Sequential processing
+            for i, user_id in enumerate(all_users):
+                if (i + 1) % 1000 == 0:
+                    print(f"  Processed {i + 1}/{len(all_users)} users...")
+
+                profile = self.build_profile(user_id)
+                if profile:
+                    self.profiles[user_id] = profile
+        else:
+            # Parallel processing
+            # Create partial function with bound data
+            build_func = partial(_build_profile_worker,
+                                movies_df=self.movies,
+                                ratings_df=self.ratings)
+
+            # Process in parallel with progress updates
+            batch_size = 1000
+            for i in range(0, len(all_users), batch_size):
+                batch = all_users[i:i + batch_size]
+                with Pool(n_workers) as pool:
+                    results = pool.map(build_func, batch)
+
+                # Collect results
+                for profile in results:
+                    if profile:
+                        self.profiles[profile['userId']] = profile
+
+                print(f"  Processed {min(i + batch_size, len(all_users))}/{len(all_users)} users...")
 
         print(f"✓ Built {len(self.profiles)} profiles")
         return self.profiles
@@ -259,12 +411,27 @@ class ProfileBuilder:
 
 if __name__ == "__main__":
     import sys
+    import argparse
 
-    # Check for dataset argument
-    dataset = "ml-1m"
-    if len(sys.argv) > 1:
-        if sys.argv[1] == "--dataset":
-            dataset = sys.argv[2] if len(sys.argv) > 2 else "ml-1m"
+    # Parse arguments
+    parser = argparse.ArgumentParser(description='Build user profiles from ratings')
+    parser.add_argument('--dataset', type=str, default='ml-1m',
+                       choices=['ml-1m', 'ml-20m'],
+                       help='Dataset to use (ml-1m or ml-20m)')
+    parser.add_argument('--workers', type=int, default=0,
+                       help='Number of parallel workers (0=auto, 1=sequential, N=use N cores)')
+    args = parser.parse_args()
+
+    dataset = args.dataset
+    n_workers = args.workers
+
+    # Auto-detect for ML-20M if not specified
+    if n_workers == 0:
+        if dataset == "ml-20m":
+            n_workers = cpu_count()  # Use all cores for ML-20M
+            print(f"Auto-detected {n_workers} CPU cores for ML-20M")
+        else:
+            n_workers = 1  # Sequential for ML-1M (fast enough)
 
     print(f"Building profiles for {dataset.upper()}...")
 
@@ -284,7 +451,7 @@ if __name__ == "__main__":
 
     # Build profiles
     builder = ProfileBuilder(movies, ratings)
-    profiles = builder.build_all_profiles()
+    profiles = builder.build_all_profiles(n_workers=n_workers)
 
     # Save
     builder.save_profiles(output_file)
