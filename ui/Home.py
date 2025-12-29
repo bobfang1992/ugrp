@@ -60,41 +60,58 @@ with col2:
 # App cards
 st.markdown("---")
 
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns(3)
 
 with col1:
     st.markdown("""
     ### 👥 Profile Viewer
 
-    **Explore existing users from the dataset**
+    **Explore existing users**
 
     - Switch between ML-1M (6K users) and ML-20M (138K users)
     - View detailed user profiles
-    - See rating history and preferences
-    - Explore genre/decade distributions
-    - Check ALS model recommendations
+    - Rating history and preferences
+    - Genre/decade distributions
+    - ALS model recommendations
 
-    📊 Perfect for understanding the dataset and user behavior patterns.
+    📊 Understand dataset and user behavior
     """)
 
-    st.markdown("👈 *Select 'Profile Viewer' from the sidebar*")
+    st.markdown("👈 *Select from sidebar*")
 
 with col2:
     st.markdown("""
     ### ⭐ My Profile
 
-    **Create your own profile and get recommendations**
+    **Get personalized recs**
 
     - Choose ML-1M (3.9K movies) or ML-20M (27K movies)
-    - Search and pick 10 movies you like
-    - Rate each movie 1-5 stars
-    - Get 20 personalized recommendations
-    - See which movies influenced each rec
+    - Pick & rate 10 movies
+    - Get 20 recommendations
+    - See similar movies
+    - Browse IMDb/TMDB links
 
-    🎯 Perfect for testing the recommender with your own taste!
+    🎯 Test with your own taste!
     """)
 
-    st.markdown("👈 *Select 'My Profile' from the sidebar*")
+    st.markdown("👈 *Select from sidebar*")
+
+with col3:
+    st.markdown("""
+    ### 📊 Model Performance
+
+    **View evaluation metrics**
+
+    - Precision@K, Recall@K
+    - NDCG@K (ranking quality)
+    - Hit Rate@K, MAP@K
+    - Compare ML-1M vs ML-20M
+    - Interactive charts
+
+    📈 Analyze model quality!
+    """)
+
+    st.markdown("👈 *Select from sidebar*")
 
 # Footer
 st.markdown("---")
@@ -110,15 +127,21 @@ st.markdown("""
 **Training Models**
 ```bash
 # ML-1M (Required - 3.9K movies, faster training)
-python src/ugrp/recsys/data_loader.py
-python src/ugrp/recsys/model.py
-python src/ugrp/profile/profile_builder.py
+python src/ugrp/recsys/data_loader.py          # Creates 80/20 train/test split
+python src/ugrp/recsys/model.py                # Trains & evaluates model
+python src/ugrp/profile/profile_builder.py     # Builds user profiles
 
 # ML-20M (Optional - 27K movies, longer training)
 python src/ugrp/recsys/data_loader.py --dataset ml-20m
 python src/ugrp/recsys/model.py --dataset ml-20m
-python src/ugrp/profile/profile_builder.py --dataset ml-20m
+python src/ugrp/recsys/profile/profile_builder.py --dataset ml-20m
 ```
+
+**What Happens During Training**
+- Data loader creates temporal train/test split (80/20 per user)
+- Model trains on training set only
+- Evaluation on held-out test set (Precision@K, NDCG@K, Hit Rate@K)
+- Results saved to `evaluation.json` and visualized in **Model Performance** page
 
 **Documentation**
 - **Spec**: `docs/UGRP_Spec_v0.1.md` - Full project specification
@@ -127,11 +150,11 @@ python src/ugrp/profile/profile_builder.py --dataset ml-20m
 
 ### 🚀 Next Steps (M2)
 
-- Model evaluation metrics (Precision@K, NDCG, etc.)
 - Control JSON schema definition
 - Deterministic reranker with constraints
 - Evidence builder for explanations
 - LLM integration for intent parsing
+- Cross-LLM evaluation framework
 """)
 
 # Verify data

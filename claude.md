@@ -27,16 +27,25 @@
    - ✅ Home page with system status
    - ✅ Profile Viewer (explore existing users)
    - ✅ My Profile (create custom profile, get recs)
+   - ✅ Model Performance (evaluation metrics visualization)
    - ✅ Dataset selector (switch between ML-1M and ML-20M)
 
+5. **Model Evaluation**
+   - ✅ Train/test split (80/20 temporal per user)
+   - ✅ Evaluation metrics: P@K, R@K, NDCG@K, HR@K, MAP@K
+   - ✅ Evaluation module (`src/ugrp/eval/`)
+   - ✅ Results saved to JSON, visualized in UI
+
 ### Key Files
-- `src/ugrp/recsys/data_loader.py` - Data loading & cleaning
-- `src/ugrp/recsys/model.py` - ALS recommender
+- `src/ugrp/recsys/data_loader.py` - Data loading & cleaning, train/test split
+- `src/ugrp/recsys/model.py` - ALS recommender training & evaluation
 - `src/ugrp/profile/profile_builder.py` - User profiling
 - `src/ugrp/recsys/movie_links.py` - IMDb/TMDB links
+- `src/ugrp/eval/evaluator.py` - Evaluation metrics (P@K, NDCG@K, etc.)
 - `ui/Home.py` - Landing page
 - `ui/pages/1_Profile_Viewer.py` - Existing user profiles
 - `ui/pages/2_My_Profile.py` - Custom profile creation
+- `ui/pages/3_Model_Performance.py` - Evaluation metrics visualization
 - `docs/profile_schema.md` - Profile JSON schema
 
 ### Training Commands
@@ -45,9 +54,9 @@
 source .venv/bin/activate
 
 # ML-1M (smaller, faster)
-python src/ugrp/recsys/data_loader.py
-python src/ugrp/recsys/model.py
-python src/ugrp/profile/profile_builder.py
+python src/ugrp/recsys/data_loader.py          # Creates train/test split (80/20 temporal)
+python src/ugrp/recsys/model.py                # Trains on train, evaluates on test
+python src/ugrp/profile/profile_builder.py     # Builds user profiles
 
 # ML-20M (larger, more comprehensive)
 python src/ugrp/recsys/data_loader.py --dataset ml-20m
@@ -58,30 +67,14 @@ python src/ugrp/profile/profile_builder.py --dataset ml-20m
 streamlit run ui/Home.py
 ```
 
----
+### Evaluation Metrics
+Models are evaluated on temporal test set (20% most recent ratings per user):
+- **Precision@K, Recall@K**: Relevance metrics
+- **NDCG@K**: Ranking quality
+- **Hit Rate@K, MAP@K**: User satisfaction metrics
+- K values: 10, 20, 50
 
-## 📊 TODO: Model Evaluation
-
-Before M2, add proper evaluation metrics for the ALS models:
-
-### Metrics to Implement
-- Precision@K, Recall@K (K=10, 20, 50)
-- NDCG@K (ranking quality)
-- Hit Rate@K
-- MAP (Mean Average Precision)
-- Catalog coverage
-
-### Evaluation Approach
-- Train/test split (80/20 or temporal)
-- Hold-out evaluation per user
-- Compare ML-1M vs ML-20M performance
-- Add results to UI or generate report
-
-### Implementation
-- Create `src/ugrp/eval/evaluator.py`
-- Use implicit library's evaluation functions
-- Generate comparison tables
-- Document in `docs/evaluation.md`
+View results in UI: **Model Performance** page
 
 ---
 
