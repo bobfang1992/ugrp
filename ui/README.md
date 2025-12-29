@@ -1,20 +1,26 @@
 # UGRP UI
 
-Simple Streamlit interface for exploring user profiles and recommendations.
+Streamlit interfaces for exploring profiles and getting personalized recommendations.
 
-## Quick Start
+## Apps
 
+### 1. Profile Viewer - Explore Existing Users
 ```bash
-# Activate environment
-source .venv/bin/activate
-
-# Run the app
 streamlit run ui/profile_viewer.py
 ```
+Explore the 6,040 users in the dataset with their profiles and recommendations.
 
-The app will open in your browser at `http://localhost:8501`
+### 2. My Profile - Create Your Own Profile
+```bash
+streamlit run ui/my_profile.py
+```
+Pick 10 movies you like and get 20 personalized recommendations!
 
-## Features
+---
+
+Both apps will open in your browser at `http://localhost:8501`
+
+## Profile Viewer Features
 
 ### 📊 Profile Stats
 - Genre preferences (from liked movies)
@@ -35,6 +41,28 @@ The app will open in your browser at `http://localhost:8501`
 - Rating history by movie year
 - Rating vs. popularity scatter plot
 - Genre coverage analysis
+
+---
+
+## My Profile Features
+
+### 🔍 Movie Search
+- Type any movie name to search
+- Live results with movie details (year, genres, ratings)
+- Add up to 10 movies to your profile
+
+### ⭐ Rating System
+- Rate each selected movie 1-5 stars
+- Adjust ratings with sliders
+- Remove movies you don't want
+
+### 🎯 Recommendations
+- Get 20 personalized recommendations
+- Based on item-item similarity from ALS model
+- Shows which movie each recommendation is similar to
+- Match scores for each recommendation
+
+---
 
 ## Usage Tips
 
