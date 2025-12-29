@@ -31,6 +31,83 @@ def load_model():
     """Load trained ALS model"""
     return ALSRecommender.load("data/processed/als_model.pkl")
 
+
+def generate_recommendations(model, movies, selected_movie_ids, ratings, n=20):
+    """Generate recommendations using item-item similarity"""
+    item_factors = model.model.item_factors
+    scores = np.zeros(len(model.movie_id_map))
+
+    for movie_id in selected_movie_ids:
+        if movie_id not in model.movie_id_map:
+            continue
+
+        item_idx = model.movie_id_map[movie_id]
+        item_vector = item_factors[item_idx]
+        similarities = item_factors @ item_vector
+        rating_weight = ratings[movie_id] / 5.0
+        scores += similarities * rating_weight
+
+    # Exclude selected movies
+    for movie_id in selected_movie_ids:
+        if movie_id in model.movie_id_map:
+            item_idx = model.movie_id_map[movie_id]
+            scores[item_idx] = -np.inf
+
+    # Get top N
+    top_indices = np.argsort(scores)[::-1][:n]
+
+    recommendations = []
+    for idx in top_indices:
+        movie_id = model.reverse_movie_map[idx]
+        score = float(scores[idx])
+        similar_to = find_most_similar(model, movie_id, selected_movie_ids, movies)
+
+        recommendations.append({
+            'movieId': movie_id,
+            'score': score,
+            'similar_to': similar_to
+        })
+
+    recs_df = pd.DataFrame(recommendations)
+    recs_df = recs_df.merge(
+        movies[['movieId', 'title_clean', 'year', 'genres', 'avg_rating',
+                'num_ratings', 'imdb_url', 'tmdb_url', 'imdb_search_url']],
+        on='movieId'
+    )
+
+    return recs_df
+
+
+def find_most_similar(model, rec_movie_id, selected_movie_ids, movies):
+    """Find which selected movie this recommendation is most similar to"""
+    if rec_movie_id not in model.movie_id_map:
+        return "Unknown"
+
+    rec_idx = model.movie_id_map[rec_movie_id]
+    rec_vector = model.model.item_factors[rec_idx]
+
+    max_sim = -1
+    most_similar_id = None
+
+    for movie_id in selected_movie_ids:
+        if movie_id not in model.movie_id_map:
+            continue
+
+        item_idx = model.movie_id_map[movie_id]
+        item_vector = model.model.item_factors[item_idx]
+        similarity = np.dot(rec_vector, item_vector)
+
+        if similarity > max_sim:
+            max_sim = similarity
+            most_similar_id = movie_id
+
+    if most_similar_id:
+        movie_info = movies[movies['movieId'] == most_similar_id].iloc[0]
+        return f"{movie_info['title_clean']} ({movie_info['year']:.0f})"
+    else:
+        return "Unknown"
+
+
 def render_movie_card(row, key_prefix, show_add_button=False, show_remove_button=False):
     """Render a movie card with details and links"""
     with st.container():
@@ -305,79 +382,3 @@ except FileNotFoundError as e:
 except Exception as e:
     st.error(f"Error: {e}")
     st.exception(e)
-
-
-def generate_recommendations(model, movies, selected_movie_ids, ratings, n=20):
-    """Generate recommendations using item-item similarity"""
-    item_factors = model.model.item_factors
-    scores = np.zeros(len(model.movie_id_map))
-
-    for movie_id in selected_movie_ids:
-        if movie_id not in model.movie_id_map:
-            continue
-
-        item_idx = model.movie_id_map[movie_id]
-        item_vector = item_factors[item_idx]
-        similarities = item_factors @ item_vector
-        rating_weight = ratings[movie_id] / 5.0
-        scores += similarities * rating_weight
-
-    # Exclude selected movies
-    for movie_id in selected_movie_ids:
-        if movie_id in model.movie_id_map:
-            item_idx = model.movie_id_map[movie_id]
-            scores[item_idx] = -np.inf
-
-    # Get top N
-    top_indices = np.argsort(scores)[::-1][:n]
-
-    recommendations = []
-    for idx in top_indices:
-        movie_id = model.reverse_movie_map[idx]
-        score = float(scores[idx])
-        similar_to = find_most_similar(model, movie_id, selected_movie_ids, movies)
-
-        recommendations.append({
-            'movieId': movie_id,
-            'score': score,
-            'similar_to': similar_to
-        })
-
-    recs_df = pd.DataFrame(recommendations)
-    recs_df = recs_df.merge(
-        movies[['movieId', 'title_clean', 'year', 'genres', 'avg_rating',
-                'num_ratings', 'imdb_url', 'tmdb_url', 'imdb_search_url']],
-        on='movieId'
-    )
-
-    return recs_df
-
-
-def find_most_similar(model, rec_movie_id, selected_movie_ids, movies):
-    """Find which selected movie this recommendation is most similar to"""
-    if rec_movie_id not in model.movie_id_map:
-        return "Unknown"
-
-    rec_idx = model.movie_id_map[rec_movie_id]
-    rec_vector = model.model.item_factors[rec_idx]
-
-    max_sim = -1
-    most_similar_id = None
-
-    for movie_id in selected_movie_ids:
-        if movie_id not in model.movie_id_map:
-            continue
-
-        item_idx = model.movie_id_map[movie_id]
-        item_vector = model.model.item_factors[item_idx]
-        similarity = np.dot(rec_vector, item_vector)
-
-        if similarity > max_sim:
-            max_sim = similarity
-            most_similar_id = movie_id
-
-    if most_similar_id:
-        movie_info = movies[movies['movieId'] == most_similar_id].iloc[0]
-        return f"{movie_info['title_clean']} ({movie_info['year']:.0f})"
-    else:
-        return "Unknown"
