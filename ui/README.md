@@ -38,7 +38,7 @@ The app will open in your browser at `http://localhost:8501`
 
 ## Usage Tips
 
-- **Quick picks**: Use sidebar buttons for Users 1, 100, or 1000
+- **User selection**: Use the dropdown in the sidebar to select any user
 - **Filtering**: Multi-select ratings to focus on specific score ranges
 - **Interactive charts**: Hover for details, click legends to toggle
 

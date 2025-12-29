@@ -45,21 +45,11 @@ try:
     st.sidebar.header("Select User")
     user_ids = sorted(profiles.keys())
 
-    # Quick picks
-    st.sidebar.markdown("**Quick picks:**")
-    col1, col2, col3 = st.sidebar.columns(3)
-    if col1.button("User 1"):
-        selected_user = 1
-    elif col2.button("User 100"):
-        selected_user = 100
-    elif col3.button("User 1000"):
-        selected_user = 1000
-    else:
-        selected_user = st.sidebar.selectbox(
-            "Or choose any user:",
-            options=user_ids,
-            index=0
-        )
+    selected_user = st.sidebar.selectbox(
+        "Choose a user:",
+        options=user_ids,
+        index=0
+    )
 
     profile = profiles[selected_user]
     user_ratings = ratings[ratings['userId'] == selected_user].copy()
