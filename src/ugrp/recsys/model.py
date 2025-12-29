@@ -190,9 +190,30 @@ class ALSRecommender:
 
 
 if __name__ == "__main__":
+    import sys
+
+    # Check for dataset argument
+    dataset = "ml-1m"
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "--dataset":
+            dataset = sys.argv[2] if len(sys.argv) > 2 else "ml-1m"
+
+    print(f"Training on {dataset.upper()}...")
+
     # Load processed data
-    print("Loading ratings data...")
-    ratings = pd.read_parquet("data/processed/ratings.parquet")
+    if dataset == "ml-20m":
+        ratings_file = "data/processed/ratings_20m.parquet"
+        movies_file = "data/processed/movies_20m.parquet"
+        model_file = "data/processed/als_model_20m.pkl"
+        candidates_file = "data/processed/candidates_20m.parquet"
+    else:
+        ratings_file = "data/processed/ratings.parquet"
+        movies_file = "data/processed/movies.parquet"
+        model_file = "data/processed/als_model.pkl"
+        candidates_file = "data/processed/candidates.parquet"
+
+    print(f"Loading ratings from {ratings_file}...")
+    ratings = pd.read_parquet(ratings_file)
 
     # Train model
     recommender = ALSRecommender(factors=64, iterations=15)
@@ -202,13 +223,13 @@ if __name__ == "__main__":
     candidates_df = recommender.get_all_candidates(n=200)
 
     # Save
-    recommender.save("data/processed/als_model.pkl")
-    candidates_df.to_parquet("data/processed/candidates.parquet", index=False)
+    recommender.save(model_file)
+    candidates_df.to_parquet(candidates_file, index=False)
 
     # Quick test
     print("\n=== Sample recommendations for user 1 ===")
     test_candidates = recommender.get_candidates(user_id=1, n=10)
-    movies = pd.read_parquet("data/processed/movies.parquet")
+    movies = pd.read_parquet(movies_file)
     for movie_id, score in test_candidates:
         movie = movies[movies['movieId'] == movie_id].iloc[0]
         print(f"{score:.3f} - {movie['title_clean']} ({movie['year']:.0f}) [{movie['genres']}]")

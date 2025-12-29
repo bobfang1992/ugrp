@@ -18,18 +18,38 @@ st.set_page_config(
 
 # Load data
 @st.cache_data
-def load_data():
+def load_data(dataset="ml-1m"):
     """Load movies data with links"""
     data_dir = Path("data/processed")
-    movies = pd.read_parquet(data_dir / "movies.parquet")
+
+    if dataset == "ml-20m":
+        movies_file = data_dir / "movies_20m.parquet"
+        if not movies_file.exists():
+            st.error("ML-20M data not found. Please process it first:")
+            st.code("python src/ugrp/recsys/data_loader.py --dataset ml-20m")
+            return None
+        movies = pd.read_parquet(movies_file)
+    else:
+        movies = pd.read_parquet(data_dir / "movies.parquet")
+
     # Add IMDb/TMDB links
     movies = add_links_to_movies(movies)
     return movies
 
 @st.cache_resource
-def load_model():
+def load_model(dataset="ml-1m"):
     """Load trained ALS model"""
-    return ALSRecommender.load("data/processed/als_model.pkl")
+    data_dir = Path("data/processed")
+
+    if dataset == "ml-20m":
+        model_file = data_dir / "als_model_20m.pkl"
+        if not model_file.exists():
+            st.error("ML-20M model not found. Please train it first:")
+            st.code("python src/ugrp/recsys/model.py --dataset ml-20m")
+            return None
+        return ALSRecommender.load(str(model_file))
+    else:
+        return ALSRecommender.load("data/processed/als_model.pkl")
 
 
 def generate_recommendations(model, movies, selected_movie_ids, ratings, n=20):
@@ -141,11 +161,27 @@ def render_movie_card(row, key_prefix, show_add_button=False, show_remove_button
 
 
 try:
-    movies = load_data()
-    model = load_model()
+    # Dataset selector
+    st.sidebar.markdown("---")
+    st.sidebar.header("⚙️ Settings")
+    dataset = st.sidebar.radio(
+        "Dataset:",
+        options=["ml-1m", "ml-20m"],
+        format_func=lambda x: "MovieLens 1M (3.9K movies)" if x == "ml-1m" else "MovieLens 20M (27K movies)",
+        help="ML-1M: 3,883 movies • ML-20M: 27,278 movies"
+    )
+
+    movies = load_data(dataset)
+    model = load_model(dataset)
+
+    if movies is None or model is None:
+        st.stop()
 
     st.title("⭐ Create Your Profile")
     st.markdown("Pick 10 movies you like, rate them, and get 20 personalized recommendations!")
+
+    # Show dataset info
+    st.caption(f"Using: {dataset.upper()} ({len(movies):,} movies)")
 
     # Initialize session state
     if 'selected_movies' not in st.session_state:

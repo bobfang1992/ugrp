@@ -142,14 +142,53 @@ def prepare_ml1m_dataset(data_dir: str = "data/raw/ml-1m",
 
 
 if __name__ == "__main__":
-    data = prepare_ml1m_dataset()
+    import sys
+
+    # Check for dataset argument
+    dataset = "ml-1m"
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "--dataset":
+            dataset = sys.argv[2] if len(sys.argv) > 2 else "ml-1m"
+
+    print(f"Processing {dataset.upper()}...")
+
+    if dataset == "ml-20m":
+        # For ML-20M, use similar logic but with CSV format
+        data_dir = "data/raw/ml-20m"
+        output_dir = "data/processed"
+
+        print("Loading ML-20M data...")
+        movies = pd.read_csv(f"{data_dir}/movies.csv")
+        ratings = pd.read_csv(f"{data_dir}/ratings.csv")
+
+        print(f"Loaded {len(movies)} movies, {len(ratings)} ratings")
+
+        # Clean movies (same logic as ML-1M)
+        movies['year'] = movies['title'].apply(extract_year)
+        movies['title_clean'] = movies['title'].str.replace(r'\s*\(\d{4}\)$', '', regex=True)
+        movies['genres_list'] = movies['genres'].str.split('|')
+        movies['num_genres'] = movies['genres_list'].apply(len)
+
+        # Compute stats
+        movie_stats = compute_movie_stats(ratings)
+        movies = movies.merge(movie_stats, on='movieId', how='left')
+
+        # Save with _20m suffix
+        print(f"Saving to {output_dir}...")
+        movies.to_parquet(f"{output_dir}/movies_20m.parquet", index=False)
+        ratings.to_parquet(f"{output_dir}/ratings_20m.parquet", index=False)
+
+        print("✓ ML-20M data processing complete!")
+        data = {'movies': movies, 'ratings': ratings, 'users': None}
+    else:
+        data = prepare_ml1m_dataset()
 
     # Print summary stats
     print("\n=== Dataset Summary ===")
     print(f"Movies: {len(data['movies'])}")
     print(f"Ratings: {len(data['ratings'])}")
-    print(f"Users: {len(data['users'])}")
-    print(f"Sparsity: {len(data['ratings']) / (len(data['users']) * len(data['movies'])) * 100:.2f}%")
+    if data['users'] is not None:
+        print(f"Users: {len(data['users'])}")
+        print(f"Sparsity: {len(data['ratings']) / (len(data['users']) * len(data['movies'])) * 100:.2f}%")
     print(f"\nYear range: {data['movies']['year'].min():.0f} - {data['movies']['year'].max():.0f}")
     print(f"Avg ratings per movie: {data['movies']['num_ratings'].mean():.1f}")
-    print(f"Avg ratings per user: {len(data['ratings']) / len(data['users']):.1f}")
