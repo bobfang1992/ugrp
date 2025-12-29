@@ -32,8 +32,9 @@ with col1:
 
     ### What's Built (M1 Complete ✅)
 
-    - **Base Recommender**: ALS model trained on 1M ratings
-    - **User Profiles**: 6,040 profiles with preferences and behavioral metrics
+    - **Dual Dataset Support**: Switch between ML-1M and ML-20M
+    - **Base Recommender**: ALS models trained on both datasets
+    - **User Profiles**: Full profiles with preferences and behavioral metrics
     - **Candidates**: Top-200 recommendations per user
 
     ### Choose an App
@@ -43,13 +44,17 @@ with col1:
 
 with col2:
     st.info("""
-    **Dataset**
-    MovieLens 1M
+    **Datasets Available**
 
+    **MovieLens 1M**
     - 6,040 users
     - 3,883 movies
     - 1M ratings
-    - 4.26% sparsity
+
+    **MovieLens 20M**
+    - 138,493 users
+    - 27,278 movies
+    - 20M ratings
     """)
 
 # App cards
@@ -63,6 +68,7 @@ with col1:
 
     **Explore existing users from the dataset**
 
+    - Switch between ML-1M (6K users) and ML-20M (138K users)
     - View detailed user profiles
     - See rating history and preferences
     - Explore genre/decade distributions
@@ -79,6 +85,7 @@ with col2:
 
     **Create your own profile and get recommendations**
 
+    - Choose ML-1M (3.9K movies) or ML-20M (27K movies)
     - Search and pick 10 movies you like
     - Rate each movie 1-5 stars
     - Get 20 personalized recommendations
@@ -112,7 +119,10 @@ st.sidebar.markdown("---")
 st.sidebar.header("System Status")
 
 data_dir = Path("data/processed")
-files_to_check = {
+
+# Check ML-1M files
+st.sidebar.markdown("**ML-1M (Required)**")
+ml1m_files = {
     "Movies": "movies.parquet",
     "Ratings": "ratings.parquet",
     "ALS Model": "als_model.pkl",
@@ -120,18 +130,41 @@ files_to_check = {
     "Profiles": "user_profiles.json"
 }
 
-all_exists = True
-for name, filename in files_to_check.items():
+ml1m_exists = True
+for name, filename in ml1m_files.items():
     exists = (data_dir / filename).exists()
-    all_exists = all_exists and exists
+    ml1m_exists = ml1m_exists and exists
     st.sidebar.markdown(f"{'✅' if exists else '❌'} {name}")
 
-if not all_exists:
-    st.sidebar.warning("⚠️ Some data files missing. Run training pipeline first.")
+# Check ML-20M files
+st.sidebar.markdown("**ML-20M (Optional)**")
+ml20m_files = {
+    "Movies": "movies_20m.parquet",
+    "Ratings": "ratings_20m.parquet",
+    "ALS Model": "als_model_20m.pkl",
+    "Candidates": "candidates_20m.parquet",
+    "Profiles": "user_profiles_20m.json"
+}
+
+ml20m_exists = True
+for name, filename in ml20m_files.items():
+    exists = (data_dir / filename).exists()
+    ml20m_exists = ml20m_exists and exists
+    st.sidebar.markdown(f"{'✅' if exists else '❌'} {name}")
+
+if not ml1m_exists:
+    st.sidebar.warning("⚠️ ML-1M data missing. Run:")
     st.sidebar.code("""
 python src/ugrp/recsys/data_loader.py
 python src/ugrp/recsys/model.py
 python src/ugrp/profile/profile_builder.py
     """, language="bash")
+elif not ml20m_exists:
+    st.sidebar.info("💡 To enable ML-20M, run:")
+    st.sidebar.code("""
+python src/ugrp/recsys/data_loader.py --dataset ml-20m
+python src/ugrp/recsys/model.py --dataset ml-20m
+python src/ugrp/profile/profile_builder.py --dataset ml-20m
+    """, language="bash")
 else:
-    st.sidebar.success("✅ All data files present")
+    st.sidebar.success("✅ Both datasets ready!")
