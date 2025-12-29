@@ -100,14 +100,34 @@ with col2:
 st.markdown("---")
 
 st.markdown("""
-### 📚 Documentation
+### 📚 Documentation & Setup
 
-- **Spec**: See `docs/UGRP_Spec_v0.1.md` for full project specification
-- **Training Guide**: See `TRAINING.md` for data processing and model training
-- **Profile Schema**: See `docs/profile_schema.md` for user profile JSON structure
+**Getting Started**
+- **Download Data**: Get [MovieLens 1M](https://grouplens.org/datasets/movielens/1m/) and/or [MovieLens 20M](https://grouplens.org/datasets/movielens/20m/)
+- **Extract to**: `data/raw/ml-1m/` and `data/raw/ml-20m/`
+- **Training Guide**: See `TRAINING.md` for complete setup instructions
+
+**Training Models**
+```bash
+# ML-1M (Required - 3.9K movies, faster training)
+python src/ugrp/recsys/data_loader.py
+python src/ugrp/recsys/model.py
+python src/ugrp/profile/profile_builder.py
+
+# ML-20M (Optional - 27K movies, longer training)
+python src/ugrp/recsys/data_loader.py --dataset ml-20m
+python src/ugrp/recsys/model.py --dataset ml-20m
+python src/ugrp/profile/profile_builder.py --dataset ml-20m
+```
+
+**Documentation**
+- **Spec**: `docs/UGRP_Spec_v0.1.md` - Full project specification
+- **Profile Schema**: `docs/profile_schema.md` - User profile JSON structure
+- **Progress**: `claude.md` - Development progress and next steps
 
 ### 🚀 Next Steps (M2)
 
+- Model evaluation metrics (Precision@K, NDCG, etc.)
 - Control JSON schema definition
 - Deterministic reranker with constraints
 - Evidence builder for explanations
