@@ -80,11 +80,14 @@ python src/ugrp/recsys/model.py --dataset ml-20m
 
 ### Step 3: Build User Profiles
 ```bash
-# ML-1M
+# ML-1M (sequential - already fast)
 python src/ugrp/profile/profile_builder.py
 
-# ML-20M
+# ML-20M (auto-detect CPUs for parallel processing)
 python src/ugrp/profile/profile_builder.py --dataset ml-20m
+
+# ML-20M with specific number of workers
+python src/ugrp/profile/profile_builder.py --dataset ml-20m --workers 8
 ```
 
 **Output:**
@@ -95,10 +98,14 @@ python src/ugrp/profile/profile_builder.py --dataset ml-20m
 - Computes genre preferences, year ranges, popularity bias
 - Calculates exploration scores
 - Shows sample profiles
+- **Uses multiprocessing for ML-20M** (auto-detects CPU cores)
 
 **Expected runtime:**
-- ML-1M: ~10 seconds (6,040 users)
-- ML-20M: ~20 minutes (138,493 users)
+- ML-1M: ~10 seconds (6,040 users, sequential)
+- ML-20M: ~3-5 minutes (138,493 users, parallel with 8-10 cores)
+- ML-20M: ~20 minutes (sequential with --workers 1)
+
+**Performance tip:** ML-20M automatically uses all CPU cores for 4-6x speedup!
 
 ---
 

@@ -21,6 +21,7 @@
    - ✅ ML-1M: 6,040 user profiles
    - ✅ ML-20M: 138,493 user profiles
    - ✅ Stats: top genres, year prefs, popularity bias, exploration score
+   - ✅ Multiprocessing optimization (4-6x speedup for ML-20M)
    - ✅ Schema documented (`docs/profile_schema.md`)
 
 4. **UI (Streamlit Multi-page App)**
@@ -56,12 +57,12 @@ source .venv/bin/activate
 # ML-1M (smaller, faster)
 python src/ugrp/recsys/data_loader.py          # Creates train/test split (80/20 temporal)
 python src/ugrp/recsys/model.py                # Trains on train, evaluates on test
-python src/ugrp/profile/profile_builder.py     # Builds user profiles
+python src/ugrp/profile/profile_builder.py     # Builds user profiles (~10 sec)
 
 # ML-20M (larger, more comprehensive)
 python src/ugrp/recsys/data_loader.py --dataset ml-20m
 python src/ugrp/recsys/model.py --dataset ml-20m
-python src/ugrp/profile/profile_builder.py --dataset ml-20m
+python src/ugrp/profile/profile_builder.py --dataset ml-20m  # Auto-parallel (~3-5 min)
 
 # Run UI
 streamlit run ui/Home.py
