@@ -258,20 +258,41 @@ class ProfileBuilder:
 
 
 if __name__ == "__main__":
+    import sys
+
+    # Check for dataset argument
+    dataset = "ml-1m"
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "--dataset":
+            dataset = sys.argv[2] if len(sys.argv) > 2 else "ml-1m"
+
+    print(f"Building profiles for {dataset.upper()}...")
+
     # Load data
     print("Loading data...")
-    movies = pd.read_parquet("data/processed/movies.parquet")
-    ratings = pd.read_parquet("data/processed/ratings.parquet")
+    if dataset == "ml-20m":
+        movies_file = "data/processed/movies_20m.parquet"
+        ratings_file = "data/processed/ratings_20m.parquet"
+        output_file = "data/processed/user_profiles_20m.json"
+    else:
+        movies_file = "data/processed/movies.parquet"
+        ratings_file = "data/processed/ratings.parquet"
+        output_file = "data/processed/user_profiles.json"
+
+    movies = pd.read_parquet(movies_file)
+    ratings = pd.read_parquet(ratings_file)
 
     # Build profiles
     builder = ProfileBuilder(movies, ratings)
     profiles = builder.build_all_profiles()
 
     # Save
-    builder.save_profiles()
+    builder.save_profiles(output_file)
 
     # Show some examples
     print("\n=== Sample Profiles ===\n")
-    for user_id in [1, 100, 1000]:
-        print(builder.get_profile_summary(user_id))
-        print()
+    sample_users = [1, 100, 1000] if dataset == "ml-1m" else [1, 1000, 10000]
+    for user_id in sample_users:
+        if user_id in builder.profiles:
+            print(builder.get_profile_summary(user_id))
+            print()

@@ -19,37 +19,86 @@ st.set_page_config(
 
 # Load data
 @st.cache_data
-def load_data():
+def load_data(dataset="ml-1m"):
     """Load all processed data"""
     data_dir = Path("data/processed")
 
-    movies = pd.read_parquet(data_dir / "movies.parquet")
-    ratings = pd.read_parquet(data_dir / "ratings.parquet")
-    candidates = pd.read_parquet(data_dir / "candidates.parquet")
+    if dataset == "ml-20m":
+        movies_file = data_dir / "movies_20m.parquet"
+        ratings_file = data_dir / "ratings_20m.parquet"
+        candidates_file = data_dir / "candidates_20m.parquet"
+        profiles_file = data_dir / "user_profiles_20m.json"
 
-    with open(data_dir / "user_profiles.json") as f:
+        if not movies_file.exists():
+            st.error("ML-20M data not found. Please process it first:")
+            st.code("python src/ugrp/recsys/data_loader.py --dataset ml-20m")
+            return None, None, None, None
+        if not profiles_file.exists():
+            st.error("ML-20M profiles not found. Please generate them first:")
+            st.code("python src/ugrp/profile/profile_builder.py --dataset ml-20m")
+            return None, None, None, None
+    else:
+        movies_file = data_dir / "movies.parquet"
+        ratings_file = data_dir / "ratings.parquet"
+        candidates_file = data_dir / "candidates.parquet"
+        profiles_file = data_dir / "user_profiles.json"
+
+    movies = pd.read_parquet(movies_file)
+    ratings = pd.read_parquet(ratings_file)
+    candidates = pd.read_parquet(candidates_file)
+
+    with open(profiles_file) as f:
         profiles = json.load(f)
 
     return movies, ratings, candidates, profiles
 
 try:
-    movies, ratings, candidates, profiles = load_data()
+    # Dataset selector
+    st.sidebar.markdown("---")
+    st.sidebar.header("⚙️ Settings")
+    dataset = st.sidebar.radio(
+        "Dataset:",
+        options=["ml-1m", "ml-20m"],
+        format_func=lambda x: "MovieLens 1M (6K users)" if x == "ml-1m" else "MovieLens 20M (138K users)",
+        help="ML-1M: 6,040 users • ML-20M: 138,493 users"
+    )
+
+    movies, ratings, candidates, profiles = load_data(dataset)
+
+    if movies is None:
+        st.stop()
 
     # Convert profile keys to int
     profiles = {int(k): v for k, v in profiles.items()}
 
     st.title("🎬 UGRP Profile Viewer")
     st.markdown("Explore user profiles, viewing history, and recommendations from the base ALS model")
+    st.caption(f"Using: {dataset.upper()} ({len(profiles):,} users, {len(movies):,} movies)")
 
     # Sidebar - User selection
+    st.sidebar.markdown("---")
     st.sidebar.header("Select User")
     user_ids = sorted(profiles.keys())
 
-    selected_user = st.sidebar.selectbox(
-        "Choose a user:",
-        options=user_ids,
-        index=0
-    )
+    # For ML-20M, use number input instead of dropdown
+    if dataset == "ml-20m":
+        selected_user = st.sidebar.number_input(
+            "Enter User ID:",
+            min_value=min(user_ids),
+            max_value=max(user_ids),
+            value=1,
+            step=1,
+            help=f"User IDs range from {min(user_ids)} to {max(user_ids)}"
+        )
+        if selected_user not in profiles:
+            st.error(f"User {selected_user} not found in profiles")
+            st.stop()
+    else:
+        selected_user = st.sidebar.selectbox(
+            "Choose a user:",
+            options=user_ids,
+            index=0
+        )
 
     profile = profiles[selected_user]
     user_ratings = ratings[ratings['userId'] == selected_user].copy()
