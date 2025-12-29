@@ -22,55 +22,83 @@ source .venv/bin/activate
 
 ### Step 1: Process Raw Data
 ```bash
+# ML-1M (smaller, faster)
 python src/ugrp/recsys/data_loader.py
+
+# ML-20M (larger dataset, optional)
+python src/ugrp/recsys/data_loader.py --dataset ml-20m
 ```
 
 **Output:**
 - `data/processed/movies.parquet` - Cleaned movie metadata with year, genres, popularity
-- `data/processed/ratings.parquet` - User ratings
-- `data/processed/users.parquet` - User demographics
+- `data/processed/ratings.parquet` - All user ratings
+- `data/processed/train_ratings.parquet` - **Training set (80% per user, temporal)**
+- `data/processed/test_ratings.parquet` - **Test set (20% per user, most recent)**
+- `data/processed/users.parquet` - User demographics (ML-1M only)
 
 **What it does:**
-- Parses ML-1M `.dat` files
+- Parses ML-1M `.dat` files or ML-20M `.csv` files
 - Extracts year from movie titles
 - Splits genres into lists
 - Computes popularity quantiles
+- **Creates temporal train/test split** (80/20 per user for evaluation)
 
 ---
 
 ### Step 2: Train ALS Model
 ```bash
+# ML-1M
 python src/ugrp/recsys/model.py
+
+# ML-20M
+python src/ugrp/recsys/model.py --dataset ml-20m
 ```
 
 **Output:**
-- `data/processed/als_model.pkl` - Trained ALS model (64 factors)
-- `data/processed/candidates.parquet` - Top-200 candidates per user (1.2M rows)
+- `data/processed/als_model.pkl` - Trained ALS model (64 factors, 15 iterations)
+- `data/processed/candidates.parquet` - Top-200 candidates per user
+- `data/processed/evaluation.json` - **Evaluation metrics** (P@K, NDCG@K, HR@K, MAP@K)
 
 **What it does:**
-- Trains ALS on 1M ratings (6,040 users × 3,706 movies)
+- **Trains ALS on training set only** (80% of ratings)
+- **Evaluates on held-out test set** (20% of ratings)
 - Generates Top-200 recommendations per user
+- Computes evaluation metrics for K=10, 20, 50
 - Displays sample recommendations for user 1
 
-**Expected runtime:** ~30 seconds
+**Expected runtime:**
+- ML-1M: ~1 minute (training + eval on 6K users)
+- ML-20M: ~20 minutes (training + eval on 138K users)
+
+**ML-1M Results:**
+- NDCG@10: 0.1264, Precision@10: 11.3%, Hit Rate@10: 57.3%
+
+**ML-20M Results:**
+- NDCG@10: 0.1403, Precision@10: 12.3%, Hit Rate@10: 55.8%
 
 ---
 
 ### Step 3: Build User Profiles
 ```bash
+# ML-1M
 python src/ugrp/profile/profile_builder.py
+
+# ML-20M
+python src/ugrp/profile/profile_builder.py --dataset ml-20m
 ```
 
 **Output:**
-- `data/processed/user_profiles.json` - 6,040 user profiles
+- `data/processed/user_profiles.json` - User profiles for all users
 
 **What it does:**
 - Aggregates stats from rating history
 - Computes genre preferences, year ranges, popularity bias
 - Calculates exploration scores
-- Shows sample profiles for users 1, 100, 1000
+- Shows sample profiles
 
-**Expected runtime:** ~10 seconds
+**Expected runtime:**
+- ML-1M: ~10 seconds (6,040 users)
+- ML-20M: ~20 minutes (138,493 users)
 
 ---
 
@@ -98,14 +126,29 @@ Check that all files were generated:
 ls -lh data/processed/
 ```
 
-**Expected files:**
+**Expected files (ML-1M):**
 ```
 movies.parquet          # ~500 KB
 ratings.parquet         # ~24 MB
+train_ratings.parquet   # ~19 MB (80%)
+test_ratings.parquet    # ~5 MB (20%)
 users.parquet           # ~200 KB
 als_model.pkl           # ~20 MB
 candidates.parquet      # ~50 MB
 user_profiles.json      # ~15 MB
+evaluation.json         # ~1 KB
+```
+
+**Additional files for ML-20M:**
+```
+movies_20m.parquet
+ratings_20m.parquet
+train_ratings_20m.parquet
+test_ratings_20m.parquet
+als_model_20m.pkl
+candidates_20m.parquet
+user_profiles_20m.json
+evaluation_20m.json
 ```
 
 ---
@@ -132,6 +175,28 @@ for movie_id, score in candidates:
     print(f'{score:.3f} - {movie[\"title_clean\"]} ({movie[\"year\"]:.0f})')
 "
 ```
+
+---
+
+## View Results in UI
+
+Launch the Streamlit UI to explore profiles and evaluation metrics:
+
+```bash
+streamlit run ui/Home.py
+```
+
+**Available pages:**
+- **Home**: Overview and system status
+- **Profile Viewer**: Explore existing users (6K or 138K)
+- **My Profile**: Create custom profile and get recommendations
+- **Model Performance**: **View evaluation metrics** with interactive charts
+
+**Model Performance page shows:**
+- Precision@K, Recall@K, NDCG@K metrics for K=10, 20, 50
+- Hit Rate@K, MAP@K statistics
+- Side-by-side comparison of ML-1M vs ML-20M
+- Interactive Plotly visualizations
 
 ---
 

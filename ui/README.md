@@ -20,10 +20,13 @@ The app will open at `http://localhost:8501` with navigation in the sidebar.
 Landing page with overview and system status check.
 
 ### 👥 Profile Viewer
-Explore the 6,040 users in the dataset with their profiles and recommendations.
+Explore users from ML-1M (6,040 users) or ML-20M (138,493 users) with their profiles and recommendations.
 
 ### ⭐ My Profile
-Pick 10 movies you like and get 20 personalized recommendations!
+Pick 10 movies you like and get 20 personalized recommendations! Choose between ML-1M (3.9K movies) or ML-20M (27K movies).
+
+### 📊 Model Performance
+View evaluation metrics with interactive visualizations. Compare ML-1M vs ML-20M performance across Precision@K, NDCG@K, Hit Rate@K, and more.
 
 ---
 

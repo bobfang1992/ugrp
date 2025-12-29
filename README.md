@@ -39,18 +39,46 @@ unzip ml-20m.zip
 source .venv/bin/activate
 ```
 
+### 4. Train models
+
+```bash
+# Process data and create train/test split
+python src/ugrp/recsys/data_loader.py
+
+# Train ALS model and evaluate
+python src/ugrp/recsys/model.py
+
+# Build user profiles
+python src/ugrp/profile/profile_builder.py
+```
+
+### 5. Launch UI
+
+```bash
+streamlit run ui/Home.py
+```
+
+The UI provides:
+- **Profile Viewer**: Explore existing users and their recommendations
+- **My Profile**: Create custom profile and get personalized recommendations
+- **Model Performance**: View evaluation metrics with interactive charts
+
 ## Project Structure
 
 ```
 ugrp/
 ├── src/ugrp/          # main package
 │   ├── profile/       # user profile builder
-│   ├── recsys/        # base recommender (ALS/MF)
-│   ├── control/       # control JSON schema
-│   ├── rerank/        # deterministic reranker
-│   ├── explain/       # evidence builder + LLM renderer
-│   ├── bench/         # ControlBench generator + evaluator
-│   └── adapters/      # LLM adapters (GPT, Gemini, etc.)
+│   ├── recsys/        # base recommender (ALS/MF) + data loader
+│   ├── eval/          # evaluation metrics (P@K, NDCG@K, etc.)
+│   ├── control/       # control JSON schema (M2)
+│   ├── rerank/        # deterministic reranker (M2)
+│   ├── explain/       # evidence builder + LLM renderer (M2/M3)
+│   ├── bench/         # ControlBench generator + evaluator (M4)
+│   └── adapters/      # LLM adapters (M3/M4)
+├── ui/                # Streamlit web interface
+│   ├── Home.py        # landing page
+│   └── pages/         # Profile Viewer, My Profile, Model Performance
 ├── data/              # datasets (gitignored)
 ├── docs/              # specs and documentation
 └── outputs/           # logs and reports (gitignored)
