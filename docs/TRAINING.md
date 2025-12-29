@@ -102,10 +102,10 @@ python src/ugrp/profile/profile_builder.py --dataset ml-20m --workers 8
 
 **Expected runtime:**
 - ML-1M: ~10 seconds (6,040 users, sequential)
-- ML-20M: ~3-5 minutes (138,493 users, parallel with 8-10 cores)
-- ML-20M: ~20 minutes (sequential with --workers 1)
+- ML-20M: ~26 minutes (138,493 users, parallel with 3 workers)
+- ML-20M: ~45-50 minutes (sequential with --workers 1)
 
-**Performance tip:** ML-20M automatically uses all CPU cores for 4-6x speedup!
+**Performance note:** Multiprocessing provides ~1.8x speedup (not linear) due to GIL contention in pandas operations. Using 3 workers balances performance vs resource usage.
 
 ---
 

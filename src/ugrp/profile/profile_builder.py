@@ -325,19 +325,22 @@ class ProfileBuilder:
                                 movies_df=self.movies,
                                 ratings_df=self.ratings)
 
-            # Process in parallel with progress updates
-            batch_size = 1000
-            for i in range(0, len(all_users), batch_size):
-                batch = all_users[i:i + batch_size]
-                with Pool(n_workers) as pool:
-                    results = pool.map(build_func, batch)
+            # Create pool once and process all users with progress tracking
+            # Use moderate chunksize to balance overhead vs progress updates
+            chunksize = 500
 
-                # Collect results
-                for profile in results:
+            with Pool(n_workers) as pool:
+                # Use imap_unordered for better performance (order doesn't matter)
+                results_iter = pool.imap_unordered(build_func, all_users, chunksize=chunksize)
+
+                # Collect results with progress updates
+                for i, profile in enumerate(results_iter, 1):
                     if profile:
                         self.profiles[profile['userId']] = profile
 
-                print(f"  Processed {min(i + batch_size, len(all_users))}/{len(all_users)} users...")
+                    # Print progress every 1000 users
+                    if i % 1000 == 0:
+                        print(f"  Processed {i}/{len(all_users)} users...", flush=True)
 
         print(f"✓ Built {len(self.profiles)} profiles")
         return self.profiles
@@ -428,8 +431,9 @@ if __name__ == "__main__":
     # Auto-detect for ML-20M if not specified
     if n_workers == 0:
         if dataset == "ml-20m":
-            n_workers = cpu_count()  # Use all cores for ML-20M
-            print(f"Auto-detected {n_workers} CPU cores for ML-20M")
+            # Use 3 workers for good balance of speed vs GIL contention
+            n_workers = min(3, cpu_count())
+            print(f"Using {n_workers} workers for ML-20M (optimal for pandas workload)")
         else:
             n_workers = 1  # Sequential for ML-1M (fast enough)
 

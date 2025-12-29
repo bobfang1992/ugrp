@@ -78,6 +78,7 @@ for i, k in enumerate(k_values):
     with cols[i]:
         st.metric(f"NDCG@{k}", f"{eval_results[f'NDCG@{k}']:.4f}")
         st.metric(f"Precision@{k}", f"{eval_results[f'P@{k}']:.4f}")
+        st.metric(f"Recall@{k}", f"{eval_results[f'R@{k}']:.4f}")
         st.metric(f"Hit Rate@{k}", f"{eval_results[f'HR@{k}']:.4f}")
 
 # Detailed metrics table
@@ -228,6 +229,12 @@ if ml1m_results and ml20m_results:
             'ML-1M': ml1m_results[f'P@{k}'],
             'ML-20M': ml20m_results[f'P@{k}'],
             'Difference': ml20m_results[f'P@{k}'] - ml1m_results[f'P@{k}']
+        })
+        comparison_data.append({
+            'Metric': f'Recall@{k}',
+            'ML-1M': ml1m_results[f'R@{k}'],
+            'ML-20M': ml20m_results[f'R@{k}'],
+            'Difference': ml20m_results[f'R@{k}'] - ml1m_results[f'R@{k}']
         })
         comparison_data.append({
             'Metric': f'Hit Rate@{k}',

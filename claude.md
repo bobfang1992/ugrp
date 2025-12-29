@@ -21,7 +21,8 @@
    - ✅ ML-1M: 6,040 user profiles
    - ✅ ML-20M: 138,493 user profiles
    - ✅ Stats: top genres, year prefs, popularity bias, exploration score
-   - ✅ Multiprocessing optimization (4-6x speedup for ML-20M)
+   - ✅ Multiprocessing optimization (~1.8x speedup for ML-20M)
+   - ✅ Progress tracking with real-time updates
    - ✅ Schema documented (`docs/profile_schema.md`)
 
 4. **UI (Streamlit Multi-page App)**
@@ -62,7 +63,7 @@ python src/ugrp/profile/profile_builder.py     # Builds user profiles (~10 sec)
 # ML-20M (larger, more comprehensive)
 python src/ugrp/recsys/data_loader.py --dataset ml-20m
 python src/ugrp/recsys/model.py --dataset ml-20m
-python src/ugrp/profile/profile_builder.py --dataset ml-20m  # Auto-parallel (~3-5 min)
+python src/ugrp/profile/profile_builder.py --dataset ml-20m  # Auto-parallel (~26 min)
 
 # Run UI
 streamlit run ui/Home.py
@@ -75,7 +76,19 @@ Models are evaluated on temporal test set (20% most recent ratings per user):
 - **Hit Rate@K, MAP@K**: User satisfaction metrics
 - K values: 10, 20, 50
 
+**Actual Results (K=10)**:
+| Dataset | NDCG@10 | P@10 | R@10 | HR@10 |
+|---------|---------|------|------|-------|
+| ML-1M   | 0.1264  | 11.3%| 6.9% | 57.3% |
+| ML-20M  | 0.1403  | 12.3%| 7.6% | 55.8% |
+
 View results in UI: **Model Performance** page
+
+### Architecture Notes
+- **ALS Model**: Uses `implicit` library's AlternatingLeastSquares
+- **Evaluation**: `src/ugrp/eval/evaluator.py` - computes metrics per user, averages
+- **Profile Builder**: Multiprocessing limited by GIL (~1.8x speedup with 3 workers)
+- **get_candidates()**: `model.py:95` - returns (movieId, score) tuples from ALS
 
 ---
 
