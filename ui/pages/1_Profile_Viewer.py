@@ -54,7 +54,6 @@ def load_data(dataset="ml-1m"):
 
 try:
     # Dataset selector
-    st.sidebar.markdown("---")
     st.sidebar.header("⚙️ Settings")
     dataset = st.sidebar.radio(
         "Dataset:",

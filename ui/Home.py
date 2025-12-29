@@ -135,7 +135,6 @@ python src/ugrp/profile/profile_builder.py --dataset ml-20m
 """)
 
 # Verify data
-st.sidebar.markdown("---")
 st.sidebar.header("System Status")
 
 data_dir = Path("data/processed")

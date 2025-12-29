@@ -162,7 +162,6 @@ def render_movie_card(row, key_prefix, show_add_button=False, show_remove_button
 
 try:
     # Dataset selector
-    st.sidebar.markdown("---")
     st.sidebar.header("⚙️ Settings")
     dataset = st.sidebar.radio(
         "Dataset:",
