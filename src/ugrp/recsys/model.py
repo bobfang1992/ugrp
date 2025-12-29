@@ -202,29 +202,43 @@ if __name__ == "__main__":
 
     # Load processed data
     if dataset == "ml-20m":
-        ratings_file = "data/processed/ratings_20m.parquet"
+        train_file = "data/processed/train_ratings_20m.parquet"
+        test_file = "data/processed/test_ratings_20m.parquet"
         movies_file = "data/processed/movies_20m.parquet"
         model_file = "data/processed/als_model_20m.pkl"
         candidates_file = "data/processed/candidates_20m.parquet"
+        eval_file = "data/processed/evaluation_20m.json"
     else:
-        ratings_file = "data/processed/ratings.parquet"
+        train_file = "data/processed/train_ratings.parquet"
+        test_file = "data/processed/test_ratings.parquet"
         movies_file = "data/processed/movies.parquet"
         model_file = "data/processed/als_model.pkl"
         candidates_file = "data/processed/candidates.parquet"
+        eval_file = "data/processed/evaluation.json"
 
-    print(f"Loading ratings from {ratings_file}...")
-    ratings = pd.read_parquet(ratings_file)
+    print(f"Loading training data from {train_file}...")
+    train_ratings = pd.read_parquet(train_file)
 
     # Train model
     recommender = ALSRecommender(factors=64, iterations=15)
-    recommender.fit(ratings)
+    recommender.fit(train_ratings)
 
-    # Generate candidates
+    # Generate candidates (on train data for now - users still need recommendations)
     candidates_df = recommender.get_all_candidates(n=200)
 
-    # Save
+    # Save model and candidates
     recommender.save(model_file)
     candidates_df.to_parquet(candidates_file, index=False)
+
+    # Evaluate on test set
+    from ugrp.eval.evaluator import evaluate_model, print_evaluation_results, save_evaluation_results
+
+    print(f"\nLoading test data from {test_file}...")
+    test_ratings = pd.read_parquet(test_file)
+
+    results = evaluate_model(recommender, test_ratings, k_values=[10, 20, 50])
+    print_evaluation_results(results)
+    save_evaluation_results(results, eval_file)
 
     # Quick test
     print("\n=== Sample recommendations for user 1 ===")

@@ -100,10 +100,64 @@ def compute_movie_stats(ratings_df: pd.DataFrame) -> pd.DataFrame:
     return movie_stats
 
 
+def train_test_split_temporal(ratings_df: pd.DataFrame,
+                               test_ratio: float = 0.2,
+                               min_train_items: int = 5) -> tuple:
+    """
+    Split ratings into train and test sets using temporal split.
+
+    For each user, the most recent test_ratio of ratings go to test set,
+    the rest go to train set. Users with fewer than min_train_items ratings
+    in train after split are excluded from test set.
+
+    Args:
+        ratings_df: DataFrame with columns [userId, movieId, rating, timestamp]
+        test_ratio: Fraction of ratings per user to hold out for testing
+        min_train_items: Minimum number of train items required per user
+
+    Returns:
+        train_df, test_df
+    """
+    print(f"Creating temporal train/test split (test_ratio={test_ratio})...")
+
+    train_ratings = []
+    test_ratings = []
+
+    for user_id in ratings_df['userId'].unique():
+        user_ratings = ratings_df[ratings_df['userId'] == user_id].sort_values('timestamp')
+        n_ratings = len(user_ratings)
+
+        # Calculate split point
+        n_test = max(1, int(n_ratings * test_ratio))
+        n_train = n_ratings - n_test
+
+        # Only include in test if user has enough train items
+        if n_train >= min_train_items:
+            train_ratings.append(user_ratings.iloc[:n_train])
+            test_ratings.append(user_ratings.iloc[n_train:])
+        else:
+            # Put all ratings in train if not enough for meaningful split
+            train_ratings.append(user_ratings)
+
+    train_df = pd.concat(train_ratings, ignore_index=True)
+    test_df = pd.concat(test_ratings, ignore_index=True) if test_ratings else pd.DataFrame()
+
+    print(f"Train: {len(train_df)} ratings ({len(train_df['userId'].unique())} users)")
+    print(f"Test: {len(test_df)} ratings ({len(test_df['userId'].unique())} users)")
+
+    return train_df, test_df
+
+
 def prepare_ml1m_dataset(data_dir: str = "data/raw/ml-1m",
-                         output_dir: str = "data/processed"):
+                         output_dir: str = "data/processed",
+                         create_split: bool = True):
     """
     Load, clean, and save ML-1M dataset to parquet.
+
+    Args:
+        data_dir: Path to raw data
+        output_dir: Path to save processed data
+        create_split: Whether to create train/test split
 
     Returns:
         Dictionary with dataframes: movies, ratings, users, movie_stats
@@ -130,6 +184,13 @@ def prepare_ml1m_dataset(data_dir: str = "data/raw/ml-1m",
     movies_df.to_parquet(output_path / "movies.parquet", index=False)
     ratings_df.to_parquet(output_path / "ratings.parquet", index=False)
     users_df.to_parquet(output_path / "users.parquet", index=False)
+
+    # Create train/test split
+    if create_split:
+        train_df, test_df = train_test_split_temporal(ratings_df)
+        train_df.to_parquet(output_path / "train_ratings.parquet", index=False)
+        test_df.to_parquet(output_path / "test_ratings.parquet", index=False)
+        print(f"✓ Saved train/test splits")
 
     print("✓ Data processing complete!")
 
@@ -177,6 +238,12 @@ if __name__ == "__main__":
         print(f"Saving to {output_dir}...")
         movies.to_parquet(f"{output_dir}/movies_20m.parquet", index=False)
         ratings.to_parquet(f"{output_dir}/ratings_20m.parquet", index=False)
+
+        # Create train/test split
+        train_df, test_df = train_test_split_temporal(ratings)
+        train_df.to_parquet(f"{output_dir}/train_ratings_20m.parquet", index=False)
+        test_df.to_parquet(f"{output_dir}/test_ratings_20m.parquet", index=False)
+        print(f"✓ Saved train/test splits")
 
         print("✓ ML-20M data processing complete!")
         data = {'movies': movies, 'ratings': ratings, 'users': None}
